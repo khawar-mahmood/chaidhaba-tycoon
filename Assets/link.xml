@@ -1,0 +1,7 @@
+<!-- Keep the game's serializable config / save classes when WebGL code stripping is set to High
+     (JsonUtility reads them by reflection-free native serialization, but the linker can't see that). -->
+<linker>
+  <assembly fullname="Assembly-CSharp">
+    <namespace fullname="ChaiTycoon" preserve="all"/>
+  </assembly>
+</linker>
