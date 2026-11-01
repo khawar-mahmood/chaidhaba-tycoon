@@ -30,16 +30,22 @@ namespace ChaiTycoon.EditorTools
             EditorSceneManager.OpenScene("Assets/ChaiTycoon/Scenes/Main.unity");
             ArtMaterials.Ensure();
             ShaderUtil.allowAsyncCompilation = false;
-            RestoreSave();
-            File.WriteAllText(BackupFile, PlayerPrefs.GetString(SaveSystem.Key, "") + "\n\u0001\n" + PlayerPrefs.GetString(SaveSystem.BackupKey, ""));
-            PlayerPrefs.DeleteKey(SaveSystem.Key);
-            PlayerPrefs.DeleteKey(SaveSystem.BackupKey);
-            PlayerPrefs.Save();
+            BackUpAndClearSave();
             SessionState.SetInt(Phase, 1);
             SessionState.SetInt("chai_promo_shot", 0);
             SessionState.SetFloat("chai_promo_start", 0);
             Hook();
             EditorApplication.isPlaying = true;
+        }
+
+        /// <summary>Keeps the editor's save aside and clears it, so the run starts fresh. RestoreSave puts it back.</summary>
+        internal static void BackUpAndClearSave()
+        {
+            RestoreSave();
+            File.WriteAllText(BackupFile, PlayerPrefs.GetString(SaveSystem.Key, "") + "\n\u0001\n" + PlayerPrefs.GetString(SaveSystem.BackupKey, ""));
+            PlayerPrefs.DeleteKey(SaveSystem.Key);
+            PlayerPrefs.DeleteKey(SaveSystem.BackupKey);
+            PlayerPrefs.Save();
         }
 
         [InitializeOnLoadMethod]
@@ -109,7 +115,7 @@ namespace ChaiTycoon.EditorTools
         }
 
         /// <summary>The full roadside stall, staffed, with the level card on "Table service".</summary>
-        static void Stage()
+        internal static void Stage()
         {
             var g = Game.I;
             var loc = g.Loc;
@@ -206,7 +212,7 @@ namespace ChaiTycoon.EditorTools
                 };
         }
 
-        static void RestoreSave()
+        internal static void RestoreSave()
         {
             if (!File.Exists(BackupFile)) return;
             var parts = File.ReadAllText(BackupFile).Split(new[] { "\n\u0001\n" }, System.StringSplitOptions.None);

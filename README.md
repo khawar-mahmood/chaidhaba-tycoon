@@ -283,6 +283,9 @@ Changes made from the GDD's literal rules to hit this curve:
   `Unity.exe -projectPath D:\ChaiTycoon -executeMethod ChaiTycoon.EditorTools.ChaiAutoCheck.Run`.
   It renders the stage 2–5 previews, lets the bot play stage 1 for 9 game minutes from a fresh save,
   saves screenshots and a log to `Screenshots/autocheck/`, puts the editor save back and quits.
+- `Editor/ChaiPromoVideo.cs` (Chai → Web → Render CrazyGames Videos): the two preview videos, rendered from the
+  real game into `Art/Store/videos` at true 1× speed, each opening on its cover from `Art/Store/covers`. Render the
+  covers first; the video needs `cover_landscape_1920x1080.png` and `cover_portrait_1080x1620.png`.
 - **CrazyGames SDK**: the official Unity SDK (`sdk.crazygames.com/UnityCrazySDK.unitypackage`, version in
   `CrazySDK.Version`): `Assets/CrazySDK`, `Plugins/crazySDK.jslib` and `WebGLTemplates/CrazyGames`. To update it,
   delete `Assets/CrazySDK` first and import the new package; importing resets `CrazyGamesSettings`, and the SDK's
