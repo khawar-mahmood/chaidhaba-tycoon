@@ -11,6 +11,7 @@ namespace ChaiTycoon
     /// </summary>
     public class Hud : MonoBehaviour
     {
+        const float AppSideInset = 44, AppEndInset = 12;
         Canvas canvas;
         RectTransform root, fxLayer, panelLayer, topLeft;
         const float TopLeftScale = 0.66f;     // 10% up from 0.6
@@ -137,14 +138,22 @@ namespace ChaiTycoon
 
         void Build()
         {
+            // joystick sits under everything else, on the whole screen: it follows the finger
+            var joyLayer = UIKit.Rect(canvas.transform, "joystick");
+            UIKit.Stretch(joyLayer, 0);
             root = UIKit.Rect(canvas.transform, "root");
             UIKit.Stretch(root, 0);
+            // the phone app can run edge to edge: keep the HUD clear of notches and rounded corners
+            if (WebBridge.InApp)
+            {
+                root.offsetMin = new Vector2(AppSideInset, AppEndInset);
+                root.offsetMax = new Vector2(-AppSideInset, -AppEndInset);
+            }
 
-            // joystick sits under everything else
-            joyRing = UIKit.Image(root, SpriteGen.RingSprite(160, 10), new Color(1, 1, 1, 0));
+            joyRing = UIKit.Image(joyLayer, SpriteGen.RingSprite(160, 10), new Color(1, 1, 1, 0));
             joyRing.rectTransform.sizeDelta = new Vector2(160, 160);
             joyRing.rectTransform.anchorMin = joyRing.rectTransform.anchorMax = Vector2.zero;
-            joyKnob = UIKit.Image(root, SpriteGen.Circle(72, 4), new Color(1, 1, 1, 0));
+            joyKnob = UIKit.Image(joyLayer, SpriteGen.Circle(72, 4), new Color(1, 1, 1, 0));
             joyKnob.rectTransform.sizeDelta = new Vector2(72, 72);
             joyKnob.rectTransform.anchorMin = joyKnob.rectTransform.anchorMax = Vector2.zero;
 
@@ -733,7 +742,6 @@ namespace ChaiTycoon
         public RectTransform UpgradesButtonRect => (RectTransform)upgradesBtn.transform;
         public RectTransform StaffButtonRect => (RectTransform)hrBtn.transform;
         public RectTransform LeafRect => leafBox;
-        public RectTransform OfferRect => offerBox;
 
         /// <summary>A tapping hand over a UI element (null hides it).</summary>
         public void PointAtUI(RectTransform target)
@@ -883,7 +891,7 @@ namespace ChaiTycoon
                 rotateHint.gameObject.SetActive(portrait);
                 rotateHint.SetAsLastSibling();
                 if (portrait && !rotatePaused) { rotatePaused = true; g.PushPause(); }
-                else if (!portrait && rotatePaused) { rotatePaused = false; g.PopPause(false); }
+                else if (!portrait && rotatePaused) { rotatePaused = false; g.PopPause(); }
             }
         }
 

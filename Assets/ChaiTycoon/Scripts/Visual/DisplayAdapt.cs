@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 namespace ChaiTycoon
 {
     /// <summary>
-    /// Dynamic resolution for the web: Poki resizes the game frame at any time (window resizes, fullscreen,
+    /// Dynamic resolution for the web: CrazyGames resizes the game frame at any time (window resizes, fullscreen,
     /// phones turning), and high-DPI screens multiply the pixels. The 3D view renders at a scale that keeps
     /// it near a pixel budget (1080p on desktop, 720p on phones), and drops in 10% steps when frames run
     /// slow, coming back up when there's headroom. The UI canvas always draws at full resolution, so text stays

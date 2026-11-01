@@ -1,8 +1,9 @@
 # Chai Dhaba Tycoon
 
-Walk-and-serve tycoon for Poki, built in Unity 6.3 (URP) from the Game Design Document.
+Walk-and-serve tycoon for CrazyGames, built in Unity 6.3 (URP) from the Game Design Document.
 This milestone is the **Stage 1 vertical slice (Roadside Stall, 0:00–~11:00)**. The GDD says to get
-this part right before anything else, because it's what Poki's Player Fit test measures.
+this part right before anything else, because it's what players judge the game on in the first minutes
+(CrazyGames' Basic Launch measures it).
 
 ## Run it
 
@@ -34,11 +35,11 @@ this part right before anything else, because it's what Poki's Player Fit test m
 | Upgrades: Rafi, Counter and Stations tabs (cost = base × growth^n × location multiplier) | Done |
 | Levels (replacing missions): a HUD level card with 2–4 tasks per level, progress bars, auto-complete, a Level Up banner, and cash/leaf/cosmetic rewards | Done (10 levels for Stage 1) |
 | Tea leaves: Recipe book perks and cosmetics shop (caps, kurtas, aprons, decorations) | Done |
-| Stars, toasts, red-dot badges, rewarded offers (2× cash, cash bag, free upgrade, leaf bundle) | Done |
+| Stars, toasts, red-dot badges, rewarded offers (2× cash, top-up, free upgrade, leaf bundle, free cook) | Done |
 | Guided FTUE: hint panel, floor arrow, camera pans, a pointing hand for UI steps (Upgrades, Staff, leaves, offers), one-time tips for each new feature | Done |
 | Expansion celebration and world map | Done (stops 2–5 show "Opening soon") |
 | Save (`cdt_save_v1` + `cdt_save_bak`, try/catch, versioned) and pausing while panels are open | Done |
-| Poki SDK bridge (`gameplayStart/Stop`, `commercialBreak`, `rewardedBreak`, tab hidden) | Done; untested in a browser |
+| CrazyGames SDK bridge (`GameplayStart/Stop`, midgame and rewarded ads, Data module saves) | Done; tested in a browser on localhost, not yet on crazygames.com |
 | Audio: every SFX and the tabla/rabab music loop are synthesised at startup (no audio files) | Done |
 
 ## Art
@@ -108,7 +109,7 @@ mockups (see UI); icons it doesn't have are generated at startup or rendered fro
   vignette). The camera follows Rafi at a fixed 50° angle, 18.4 m back (20% closer than before), stopping only at the yard's edges. Floor rings
   have name pills ("Serve", "Table", "Rickshaw") from `WorldUI.RingLabel`; the stations have none (they landed on the counter tops). A station's stock count (or the FULL tag) sits just over its side table and its Hire-cook button on the stove front; no world widget goes under the top HUD strip.
   The hero props keep more detail (stoves about 21k triangles, counter 12k, sink 9k); textures import at
-  most 1024 px (colour, metal/smoothness) and 256 px (normal maps) with high-quality crunch, for the Poki download.
+  most 1024 px (colour, metal/smoothness) and 256 px (normal maps) with high-quality crunch, for the web download.
 - **Export**: run `Art/Blender/export_art.py` in Blender. It writes `Resources/Art/art_core.bytes`
   (stage 1 props, every character, the stage 1 environment and layout; 2.9 MB raw) and
   `art_stage2..5.bytes` (0.3–0.8 MB each, loaded only when needed; currently not exported, see Stages 2–5), plus the textures in
@@ -186,7 +187,7 @@ mockups (see UI); icons it doesn't have are generated at startup or rendered fro
   apron for cooks, the waiter for other staff) to task icons, unlock tiles and the hire card; `Skin.Icon` swaps
   in painted icons (rickshaw, counter lane, leaf) where the config names them.
 - **Stages 2–5** are modelled and laid out, but their gameplay isn't built yet, so they're **out of the
-  build for now** (smaller Poki download): their packs (`art_stage2..5.bytes`) and the textures and
+  build for now** (smaller web download): their packs (`art_stage2..5.bytes`) and the textures and
   materials only they use (`KitStalls`, `KitStreet`, `KitMenuBoard`, 18 MB) are in `Art/Export/later_stages`,
   with their `.meta` files, and `export_art.py` has `EXPORT_LATER_STAGES = False`. To bring them back, set
   it to True and export, or move those files back into `Assets/ChaiTycoon/Resources/Art` (`Tex/`, `Mats/`).
@@ -261,7 +262,7 @@ Changes made from the GDD's literal rules to hit this curve:
 ## Code map (`Assets/ChaiTycoon/Scripts`)
 
 - `Core/`: `Game` (owns the run, wallet, pause and flow), `Economy` (config), `SaveData`/`SaveSystem`,
-  `Upgrades` (all derived stats), `WebBridge` (localStorage and Poki), `Tw` (tweens), `GameEvents`.
+  `Upgrades` (all derived stats), `WebBridge` (storage and CrazyGames), `Tw` (tweens), `GameEvents`.
 - `Gameplay/`: `Location` (Stage 1 layout and unlock builders), `Player`, `InputReader`,
   `CarryStack`, `Station`, `ServicePoint` (counter lanes and rickshaw spots), `CashPile`, `Customer`,
   `DiningTable` (seats, plates, table cash pile), `CustomerSpawner`, `UnlockTile`, `Staff`,
@@ -282,20 +283,33 @@ Changes made from the GDD's literal rules to hit this curve:
   `Unity.exe -projectPath D:\ChaiTycoon -executeMethod ChaiTycoon.EditorTools.ChaiAutoCheck.Run`.
   It renders the stage 2–5 previews, lets the bot play stage 1 for 9 game minutes from a fresh save,
   saves screenshots and a log to `Screenshots/autocheck/`, puts the editor save back and quits.
-- **Poki SDK**: Poki's own Unity SDK (from `Downloads/unity2022`): `Scripts/Poki/PokiUnitySDK.cs`,
-  `Plugins/WebGL/PokiSDKBridge.jslib` and `WebGLTemplates/poki-template` (on poki.com the page is generated
-  from its `index.json`; Poki's loader shows the download progress and sizes the canvas to the frame, 16:9
-  to 9:16). `WebBridge` drives it: `init` and `gameLoadingStart` at startup, `gameLoadingFinished` when the
-  boot ends, `gameplayStart` / `gameplayStop` whenever play starts or stops (panels, pause, hidden tab, ads),
-  `commercialBreak` at natural breaks (closing a panel, travelling), `rewardedBreak` only on the player's
-  request (offers, the free upgrade, leaves), game audio muted while an ad plays, and `measure("level", n,
-  "complete" / "start")` at level-ups. The SDK file `PokiSDKBridge.jslib` also contains `JS_PokiSDK_preInit`,
-  which injects an obfuscated script (an endless `debugger` loop that freezes the page when developer tools
-  are open); nothing calls it. `Plugins/WebGL/ChaiWeb.jslib` keeps localStorage, phone detection, tab
-  visibility and blocking page scroll. The old custom template is in `Docs/old_webgl_template`.
-- **Boot**: `Game.Awake` only loads the config and save and shows `UI/LoadingScreen` (cup, title, progress
-  bar) on the first frame; `Game.Start` then builds audio, the art pack and the dhaba over a few frames and
-  logs each step (`[Boot] audio: … ms`). In the editor, `Editor/FastPlayMode.cs` turns off the domain reload
+- **CrazyGames SDK**: the official Unity SDK (`sdk.crazygames.com/UnityCrazySDK.unitypackage`, version in
+  `CrazySDK.Version`): `Assets/CrazySDK`, `Plugins/crazySDK.jslib` and `WebGLTemplates/CrazyGames`. To update it,
+  delete `Assets/CrazySDK` first and import the new package; importing resets `CrazyGamesSettings`, and the SDK's
+  sitelock only lets the build run on CrazyGames and localhost. `WebBridge` drives it: `CrazySDK.Init` at startup
+  (`Game.Start` waits up to 10 s for it, then saves locally for that session), saves in `CrazySDK.Data` (so turn
+  on **Progress Save** when submitting, or nothing is saved), `GameplayStart` when the boot ends and at every
+  resume, `GameplayStop` on panels, pause and ads (not on a hidden tab: the site handles focus and asks games
+  not to report it), midgame ads only between levels (from 5 minutes of play) and when travelling, never on
+  closing a panel, rewarded ads only on the player's request, game audio muted while an ad plays, and
+  `HappyTime` when a stage is finished. Unity's stripping can't see the SDK's `SendMessage` callbacks,
+  so `Assets/link.xml` keeps the `CrazyGames` namespace. `Plugins/WebGL/ChaiWeb.jslib` keeps phone detection,
+  tab visibility, blocking page scroll and the localStorage fallback.
+- **Rewarded ads** (CrazyGames' rules shape these): 2x cash sits at the top of the Upgrades panel, for an ad or
+  for 60 seconds of income in coins, because rewarded buttons aren't allowed on the active gameplay screen. The
+  cook card always offers cash (`cookCost`) beside the ad, since a level can't depend on an ad. On the Welcome
+  back panel, Collect and 2x Watch ad match in size, font and colour. Two ad buttons still appear during play,
+  by choice: the short-of-cash top-up and the cook card, each only when Rafi stands at the spot that needs it.
+- **Without ads**: ads are off during Basic Launch and with an ad blocker. `WebBridge.RewardsAvailable` then goes
+  false for the session and every rewarded button hides. The game knows at startup: `prefetchAd` throws in Basic
+  Launch (`Chai_AdsDisabled`), and the SDK reports ad blockers, which get a toast and a line on the 2x strip (CrazyGames wants a notice). Ad errors are matched
+  by prefix because the docs say `adsDisabled` while SDK 3.8.0 sends `adsDisabledBasicLaunch`.
+- **Save safety**: `SaveSystem.Load` logs what it read (`[Save] load: main 1355, backup 1355`). A run that found
+  no save won't overwrite a stored save with more play on it. Twice in the editor a run started blank during a
+  stalled boot, cause unknown; it never happened in a browser, and the log line is there to catch it.
+- **Boot**: `Game.Awake` only loads the config and shows `UI/LoadingScreen` (cup, title, progress bar) on the
+  first frame; `Game.Start` then waits for the SDK, loads the save, and builds audio, the art pack and the dhaba
+  over a few frames, logging each step (`[Boot] audio: … ms`). In the editor, `Editor/FastPlayMode.cs` turns off the domain reload
   on Play (the 7–9 s grey Game view was that reload); statics that must start clean reset themselves.
 - **Dynamic resolution**: `Visual/DisplayAdapt.cs` renders the 3D view near a pixel budget (1080p on
   desktop, 720p on phones) however big or high-DPI the frame is, and lowers it in 10% steps when frames run
@@ -308,10 +322,9 @@ Changes made from the GDD's literal rules to hit this curve:
   kits plus `GTA/Highway`, `roadprops2`, the metal bench and the rest). Drop a tuk-tuk model in and it can
   replace `PROP_Rickshaw` (used for the rickshaw customers, the stand and traffic).
 - Fences, trees, the rickshaw stand and the cars and trucks are also still my Blender models.
-- **WebGL build**: the Unity WebGL Build Support module isn't installed (add it from Unity Hub).
-  Player settings (applied by `Editor/WebGLSetup.cs` each time the editor loads, per Poki's Unity guide): Poki's template, compression Disabled (Poki compresses), file names as hashes, explicitly thrown exceptions only, data caching, engine code stripping, managed stripping High (Medium if the build breaks). Post-processing stays on for the look, although Poki suggests turning it off to save size. The template holds the store images (from `Art/Store`, the originals as PNG): `screenshots/1-4.jpg` at 853×480, `screenshots/1-4-small.jpg` at 100×56 and `thumbnail.jpg` at 100×100; `Icons/icon512.png` is set as the game's default icon by the same script.
-**Chai → Web → Build for Poki** applies those settings, builds WebGL into `Builds/Poki` (replacing the last build), zips it as `Builds/ChaiTycoon_Poki_<date>.zip` (index.html at the zip's root, ready to upload to Poki) and opens the folder. From the command line: `Unity.exe -batchmode -quit -projectPath D:\ChaiTycoon -executeMethod ChaiTycoon.EditorTools.WebGLSetup.BuildForPoki`.
-  **Download size is the big risk**: `Resources/Art/Tex` holds about 58 MB of source textures (stage 1 kits, after stages 2–5 were taken out; every kit's
+- **WebGL build**: player settings are applied by `Editor/WebGLSetup.cs` each time the editor loads, per CrazyGames' optimization guide: their template, Brotli (they only accept compressed builds), file names as hashes, explicitly thrown exceptions only, data caching, engine code stripping, managed stripping High (Medium if the build breaks), IL2CPP optimised for size, WebAssembly 2023, BigInt and Table, no splash. Post-processing stays on for the look, although it adds about 1 MB. `Icons/icon512.png` is set as the game's default icon by the same script; the store images are in `Art/Store`.
+**Chai → Web → Build for CrazyGames** applies those settings and runs the SDK's release build into `Builds/CrazyGamesRelease` (a DXT build plus an ASTC data file, with Disk Size LTO), then opens it on localhost. The game ships for desktop browsers, so the SDK's low-memory phone builds are off (`supportsMobile` in `WebGLSetup.cs`); a good build is 8 files. Upload every file in that folder at developer.crazygames.com. Development builds don't run on the site. From the command line: `Unity.exe -batchmode -quit -projectPath D:\ChaiTycoon -executeMethod ChaiTycoon.EditorTools.WebGLSetup.BuildForCrazyGames`.
+  **Download size is the big risk** (CrazyGames allows 50 MB up to the first `GameplayStart`, 20 MB for the mobile homepage; the first release build, on 2026-10-31, is 20.6 MB, or 19.6 MiB: data 14.7, wasm 5.8, framework and loader 0.1): `Resources/Art/Tex` holds about 58 MB of source textures (stage 1 kits, after stages 2–5 were taken out; every kit's
   maps). They now import at 1024 px, normal maps at 256 px, a quarter or less of the 2048 px data; the
   painted UI keeps full size (3.8 MB of source, 9-sliced). Measure the first build to see what's left.
 - **Font size**: Baloo 2 ExtraBold (titles, numbers, buttons) and Nunito ExtraBold (body text) are in

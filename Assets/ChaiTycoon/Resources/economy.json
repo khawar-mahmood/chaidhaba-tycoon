@@ -16,10 +16,11 @@
     "luckyTipInterval": 300,
     "boostDuration": 120,
     "boostMultiplier": 2,
+    "boostCostSeconds": 60,
     "offerFirstAt": 150,
     "offerCooldown": 180,
-    "offerVisible": 45,
     "offerRetryAfterFail": 60,
+    "midgameFirstAt": 300,
     "autosave": 10,
     "cookCost": 90,
     "cookCostGrowth": 1.6,
@@ -136,7 +137,7 @@
             "desc": "Serve both queues and <color=#1B6DB3>collect the coins</color> piling up at each counter" } ] },
         { "title": "A cook in the kitchen", "sequential": true, "reward": 70, "leaves": 0, "tasks": [
           { "type": "hire", "target": "cook", "count": 1, "text": "Hire a cook at a stove", "icon": "staff",
-            "desc": "Watch an ad at a stove for a free <color=#1B6DB3>cook</color>. Cooks keep a stove cooking while you serve" },
+            "desc": "Stand at a stove to hire a <color=#1B6DB3>cook</color>. Cooks keep a stove cooking while you serve" },
           { "type": "upgrade", "target": "carry", "count": 1, "text": "Upgrade your carry capacity", "icon": "stack",
             "desc": "Tap <color=#1B6DB3>Upgrades</color> and raise your carry capacity to hold more on every trip" },
           { "type": "serve", "target": "chai", "count": 10, "text": "Deliver 10 chai", "icon": "chai",
@@ -268,10 +269,9 @@
     { "id": "kurta_green", "name": "Green kurta", "slot": "kurta", "color": "#2FBF5B", "price": 0, "icon": "shirt" }
   ],
   "offers": [
-    { "id": "boost", "name": "2x cash, 2 min", "size": "medium", "cooldown": 180, "value": 120, "icon": "x2" },
-    { "id": "cashbag", "name": "Cash bag", "size": "small", "cooldown": 180, "value": 60, "icon": "bag" },
-    { "id": "freeUpgrade", "name": "Free upgrade", "size": "medium", "cooldown": 0, "value": 0, "icon": "up" },
-    { "id": "instantHire", "name": "Instant hire", "size": "large", "cooldown": 0, "value": 0, "icon": "staff" },
-    { "id": "leafBundle", "name": "Leaf bundle", "size": "small", "cooldown": 1200, "value": 3, "icon": "leaf" }
+    { "id": "boost", "name": "2x cash, 2 min", "cooldown": 180, "value": 120, "icon": "x2" },
+    { "id": "freeUpgrade", "name": "Free upgrade", "cooldown": 0, "value": 0, "icon": "up" },
+    { "id": "instantHire", "name": "Instant hire", "cooldown": 0, "value": 0, "icon": "staff" },
+    { "id": "leafBundle", "name": "Leaf bundle", "cooldown": 1200, "value": 3, "icon": "leaf" }
   ]
 }

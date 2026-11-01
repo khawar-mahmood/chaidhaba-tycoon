@@ -229,8 +229,6 @@ namespace ChaiTycoon
             L.done.Clear();
             Ensure();
             g.Hud.Level.LevelUp(finished + 1, done, Current);
-            WebBridge.Measure("level", finished.ToString(), "complete");
-            if (Current != null) WebBridge.Measure("level", (finished + 1).ToString(), "start");
             GameEvents.LevelUp?.Invoke(L.level);
             PreCheck();
             OnTasksShown();

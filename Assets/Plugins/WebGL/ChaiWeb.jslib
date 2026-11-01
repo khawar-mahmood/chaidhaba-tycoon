@@ -1,6 +1,6 @@
 // Browser helpers for Chai Dhaba Tycoon: localStorage wrapped in try/catch (incognito-safe), phone
-// detection, tab visibility and no page scrolling on game keys. The Poki SDK calls are in PokiSDKBridge.jslib
-// (Poki's own plugin, driven by Scripts/Poki/PokiUnitySDK.cs).
+// detection, tab visibility and no page scrolling on game keys. The CrazyGames SDK calls are in ../crazySDK.jslib
+// (the SDK's own plugin). The localStorage calls are only a fallback: saves normally go to the SDK's Data module.
 mergeInto(LibraryManager.library, {
 
   Chai_StorageGet: function (keyPtr) {
@@ -26,16 +26,28 @@ mergeInto(LibraryManager.library, {
     catch (e) { return 0; }
   },
 
+  // 1 when CrazyGames has ads off for this game. The SDK has no flag for it, but prefetchAd throws at once then
+  // (and otherwise just gets a rewarded ad ready).
+  Chai_AdsDisabled: function () {
+    try { window.CrazyGames.SDK.ad.prefetchAd("rewarded"); return 0; }
+    catch (e) { return e && e.code && String(e.code).indexOf("adsDisabled") === 0 ? 1 : 0; }
+  },
+
   Chai_Init: function (goPtr) {
     window.__chaiGo = UTF8ToString(goPtr);
     try {
-      // Block the page from scrolling on arrow keys / space (Poki embeds games in a scrolling page).
+      // Block the page from scrolling on arrow keys / space (CrazyGames embeds games in a scrolling page).
       window.addEventListener("keydown", function (ev) {
         if ([32, 37, 38, 39, 40].indexOf(ev.keyCode) > -1) ev.preventDefault();
       }, { passive: false });
     } catch (e) {}
     try {
-      // Tab hidden or phone locked: pause the simulation, gameplayStop, mute.
+      // No selection menu or magnifier on a long press (a CrazyGames mobile requirement).
+      var body = document.body.style;
+      body.userSelect = body.webkitUserSelect = body.webkitTouchCallout = "none";
+    } catch (e) {}
+    try {
+      // Tab hidden or phone locked: pause the simulation, mute.
       document.addEventListener("visibilitychange", function () {
         try { SendMessage(window.__chaiGo, "OnVisibility", document.hidden ? "1" : "0"); } catch (e) {}
       });

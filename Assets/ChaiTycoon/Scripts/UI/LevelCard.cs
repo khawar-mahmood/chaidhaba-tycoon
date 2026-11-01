@@ -291,6 +291,7 @@ namespace ChaiTycoon
                 {
                     bannerT = -1;
                     Tw.Run(0.2f, k => { if (banner) banner.localScale = Vector3.one * (1 - k); }, () => banner.gameObject.SetActive(false), true);
+                    Game.I.LevelBreak();   // after the celebration, the natural break between levels
                 }
             }
         }

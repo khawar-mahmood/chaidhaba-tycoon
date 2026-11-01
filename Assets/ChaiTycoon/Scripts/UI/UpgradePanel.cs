@@ -21,6 +21,12 @@ namespace ChaiTycoon
         readonly List<(Card card, UpgradeCfg u, string sub)> cards = new List<(Card, UpgradeCfg, string)>();
         string adCardKey; // one free-with-ad card per visit
         bool adUsed;
+        // the 2x cash strip above the cards on every tab, the same place each time
+        GameObject boostAd;
+        Button boostCash;
+        Image boostCashImg, boostAdImg;
+        Text boostText, boostCashText;
+        const float BoostRowH = 84;
 
         protected override void Build()
         {
@@ -80,8 +86,11 @@ namespace ChaiTycoon
             int col = 0;
             string lastGroup = null;
 
+            boostText = null;
+            if (g.Offers.BoostVisible) { BuildBoostRow(w * 3 + gap * 2); y = BoostRowH + gap; }
+
             // pick the one card that may be offered for free with an ad: an upgrade the player can't afford yet
-            if (!adUsed && adCardKey == null && g.S.playSeconds > 300)
+            if (!adUsed && adCardKey == null && g.S.playSeconds > 300 && WebBridge.RewardsAvailable)
             {
                 foreach (var (u, sub) in list)
                     if (!g.Up.IsMax(u, sub) && !g.Up.CanAfford(u, sub)) { adCardKey = u.id + sub; break; }
@@ -113,13 +122,61 @@ namespace ChaiTycoon
             LiveRefresh();
         }
 
+        void BuildBoostRow(float width)
+        {
+            var row = Skin.Img(content, "card_shop", SpriteGen.Panel(16, 3)).rectTransform;
+            UIKit.TopLeft(row, 0, 0, width, BoostRowH);
+            var icon = UIKit.Image(row, SpriteGen.Icon("x2"), Color.white, "icon");
+            icon.preserveAspect = true;
+            UIKit.TopLeft(icon.rectTransform, 18, 14, 56, 56);
+            boostText = UIKit.Text(row, "", 21, Skin.Ink, TextAnchor.MiddleLeft);
+            UIKit.TopLeft(boostText.rectTransform, 88, 12, width - 88 - 410, 60);
+            boostText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            boostText.resizeTextForBestFit = true; boostText.resizeTextMinSize = 14; boostText.resizeTextMaxSize = 21;
+
+            boostCash = UIKit.Button(row, Pal.Parrot, "", BuyBoost, 22, SpriteGen.Icon("coin"), 34);
+            UIKit.TopLeft((RectTransform)boostCash.transform, width - 400, 14, 186, 56);
+            boostCashImg = boostCash.GetComponent<Image>();
+            boostCashText = boostCash.GetComponentInChildren<Text>();
+            var ad = UIKit.Button(row, Pal.Marigold, "Watch ad", WatchForBoost, 22, SpriteGen.Icon("tv"), 34);
+            UIKit.TopLeft((RectTransform)ad.transform, width - 200, 14, 186, 56);
+            boostAdImg = ad.GetComponent<Image>();
+            boostAd = ad.gameObject;
+        }
+
+        void BuyBoost()
+        {
+            if (Game.I.Offers.BuyBoost()) { Synth.Play("buy"); LiveRefresh(); }
+            else Shake(boostCash.transform);
+        }
+
+        void WatchForBoost() => Game.I.Offers.WatchForBoost(LiveRefresh);
+
+        void RefreshBoostRow()
+        {
+            if (boostText == null) return;
+            var g = Game.I;
+            var o = g.Offers;
+            bool ready = o.BoostReady;
+            double price = o.BoostCost;
+            boostText.text = g.BoostLeft > 0 ? "2x cash running: " + Fmt.Clock(g.BoostLeft)
+                : o.BoostCooldown > 0 ? "2x cash back in " + Fmt.Clock(o.BoostCooldown)
+                : WebBridge.AdBlocked ? "Double your cash for 2 minutes\nAd blocker on: ad bonuses are off"
+                : "Double your cash for 2 minutes";
+            boostCashText.text = Fmt.Cash(price);
+            UIKit.Paint(boostCashImg, ready && g.S.cash >= price ? Pal.Parrot : Pal.ButtonGrey);
+            bool ad = o.BoostAdOffered;
+            if (boostAd.activeSelf != ad) boostAd.SetActive(ad);
+            if (ad) UIKit.Paint(boostAdImg, ready ? Pal.Marigold : Pal.ButtonGrey);
+        }
+
         void Buy(Card c, UpgradeCfg u, string sub)
         {
             var g = Game.I;
             if (g.Up.IsMax(u, sub)) return;
             if (adCardKey == u.id + sub && !g.Up.CanAfford(u, sub))
             {
-                WebBridge.RewardedBreak("medium", ok =>
+                WebBridge.RewardedBreak(ok =>
                 {
                     if (ok && g.Up.Buy(u, sub, true))
                     {
@@ -127,6 +184,7 @@ namespace ChaiTycoon
                         adCardKey = null;
                         Bought(c);
                     }
+                    if (!WebBridge.RewardsAvailable) adCardKey = null;
                     LiveRefresh();
                 });
                 return;
@@ -164,6 +222,7 @@ namespace ChaiTycoon
         protected override void LiveRefresh()
         {
             var g = Game.I;
+            RefreshBoostRow();
             foreach (var (c, u, sub) in cards)
             {
                 int lvl = g.Up.Level(u.id, sub);

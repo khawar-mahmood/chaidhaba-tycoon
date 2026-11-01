@@ -108,7 +108,7 @@ namespace ChaiTycoon
         Camera cam;
 
         /// <summary>
-        /// The framing is made for 16:9. Narrower windows (Poki resizes its frame freely: 4:3, square, a phone's
+        /// The framing is made for 16:9. Narrower windows (CrazyGames resizes its frame freely: 4:3, square, a phone's
         /// odd sizes) pull the camera back so the yard still fits across; wider ones keep the 16:9 distance.
         /// </summary>
         float AspectFit()

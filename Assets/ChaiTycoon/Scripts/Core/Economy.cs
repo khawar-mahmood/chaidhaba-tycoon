@@ -90,10 +90,11 @@ namespace ChaiTycoon
         public float luckyTipInterval = 300f;
         public float boostDuration = 120f;
         public float boostMultiplier = 2f;
+        public float boostCostSeconds = 60f;
         public float offerFirstAt = 150f;
         public float offerCooldown = 180f;
-        public float offerVisible = 45f;
         public float offerRetryAfterFail = 60f;
+        public float midgameFirstAt = 300f;
         public float autosave = 10f;
         public float oldLocationShare = 0.1f;
         public float missionsAppearAt = 120f;
@@ -234,7 +235,6 @@ namespace ChaiTycoon
     {
         public string id;
         public string name;
-        public string size; // small, medium, large
         public float cooldown;
         public float value;
         public string icon;

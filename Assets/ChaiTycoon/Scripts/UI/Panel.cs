@@ -18,7 +18,6 @@ namespace ChaiTycoon
         protected RectTransform frame, body;
         protected Text title;
         public bool IsOpen { get; private set; }
-        protected virtual bool CommercialBreakOnClose => true;
         protected virtual string SkinName => "panel_blank";
         /// <summary>The painted frame already says what the panel is.</summary>
         protected virtual bool TitleBaked => false;
@@ -98,7 +97,7 @@ namespace ChaiTycoon
             IsOpen = false;
             OpenCount = Mathf.Max(0, OpenCount - 1);
             UIKit.ScaleOut(frame, gameObject, () => !IsOpen);   // shrinks and fades, then deactivates
-            Game.I.PopPause(CommercialBreakOnClose);
+            Game.I.PopPause();
             Game.I.Hud.Refresh();
         }
 

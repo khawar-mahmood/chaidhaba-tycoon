@@ -41,7 +41,7 @@ FORCED_CORE = ['TruckPink', 'TruckTeal', 'TruckMarigold', 'CarRed', 'CarWhite', 
 STAGE1_FENCES = ('FenceSideBackL', 'FenceSideBackR', 'FenceSideR_')
 # keep Blender's bevel segments so props look exactly as modelled (False: one segment, smaller packs)
 EXACT_BEVELS = True
-# stages 2-5 aren't playable yet, so their packs and textures stay out of the build (smaller download on Poki).
+# stages 2-5 aren't playable yet, so their packs and textures stay out of the build (smaller web download).
 # Their last export is kept in Art/Export/later_stages; set True to export them into Resources again.
 EXPORT_LATER_STAGES = False
 PAL = 32                    # palette texture is PAL x PAL texels, one per plain colour

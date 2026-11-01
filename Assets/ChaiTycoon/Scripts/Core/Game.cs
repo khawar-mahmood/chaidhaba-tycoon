@@ -58,6 +58,7 @@ namespace ChaiTycoon
         public bool Booted { get; private set; }
         LoadingScreen loading;
         double awaySeconds;
+        const float SdkWaitSeconds = 10f;
 
         void Awake()
         {
@@ -70,10 +71,6 @@ namespace ChaiTycoon
             WebBridge.AdStateChanged += OnAdState;
 
             Eco = Economy.Load();
-            S = SaveSystem.Load();
-            // time since the last save (before the first new save overwrites it), for the offline earnings
-            awaySeconds = S.lastSeen > 0 ? Math.Max(0, (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - S.lastSeen) / 1000.0) : 0;
-            Up = new Upgrades(this);
             SetupRendering();
             SetupEventSystem();
             DisplayAdapt.Ensure();
@@ -82,8 +79,8 @@ namespace ChaiTycoon
         }
 
         /// <summary>
-        /// Boots over a few frames behind the loading screen: audio, the art pack, then the dhaba itself
-        /// (UI, world and systems in one frame, since they reference each other). Each step's time is logged.
+        /// Boots over a few frames behind the loading screen: the SDK and the save, audio, the art pack, then the
+        /// dhaba itself (UI, world and systems in one frame, since they reference each other). Each step's time is logged.
         /// </summary>
         System.Collections.IEnumerator Start()
         {
@@ -98,6 +95,11 @@ namespace ChaiTycoon
             }
 
             yield return null;          // let the loading screen draw
+            // the save lives in the SDK's Data module, which only works once the SDK's async init is done
+            for (float waited = 0; WebBridge.SdkPending && waited < SdkWaitSeconds; waited += Time.unscaledDeltaTime) yield return null;
+            WebBridge.StopWaitingForSdk();
+            Step("save", 0.1f, LoadSave);
+            yield return null;
             Step("audio", 0.25f, () =>
             {
                 Synth.Create();
@@ -128,10 +130,18 @@ namespace ChaiTycoon
             Booted = true;
             loading.Hide();
             Debug.Log($"[Boot] ready in {total.ElapsedMilliseconds} ms");
-            WebBridge.GameLoadingFinished();
             Hud.ShowLoadingDone();
             double offline = OfflinePanel.Earnings(awaySeconds);
             if (offline >= 5) Hud.Offline.Show(offline, awaySeconds);
+            ApplyPause();               // the first GameplayStart: CrazyGames counts the initial download up to here
+        }
+
+        void LoadSave()
+        {
+            S = SaveSystem.Load();
+            // time since the last save (before the first new save overwrites it), for the offline earnings
+            awaySeconds = S.lastSeen > 0 ? Math.Max(0, (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - S.lastSeen) / 1000.0) : 0;
+            Up = new Upgrades(this);
         }
 
         // ------------------------------------------------------------------ setup
@@ -267,6 +277,7 @@ namespace ChaiTycoon
             LS.finalIncome = IncomeRate;
 
             GameEvents.Expanded?.Invoke();
+            WebBridge.HappyTime();
             AddLeaves(5, Player.transform.position + Vector3.up * 2);
             var next = Eco.Location(S.location + 1);
             if (next != null && next.playable) S.maxLocation = Mathf.Max(S.maxLocation, next.id);
@@ -288,7 +299,7 @@ namespace ChaiTycoon
             PushPause();
             WebBridge.CommercialBreak(() =>
             {
-                PopPause(false);
+                PopPause();
                 EnterLocation(id, false);
                 Progression.ResetForLocation();
                 Loc.RefreshGrowth(Progression.DisplayLevel, false);
@@ -362,7 +373,6 @@ namespace ChaiTycoon
         {
             if (Started) return;
             Started = true;
-            WebBridge.GameplayStart();
             Synth.I.StartMusic();
         }
 
@@ -372,25 +382,32 @@ namespace ChaiTycoon
             ApplyPause();
         }
 
-        public void PopPause(bool commercialBreak)
+        public void PopPause()
         {
             pauseRequests = Mathf.Max(0, pauseRequests - 1);
-            if (commercialBreak && pauseRequests == 0 && Started)
-            {
-                pauseRequests++;
-                WebBridge.CommercialBreak(() => { pauseRequests = Mathf.Max(0, pauseRequests - 1); ApplyPause(); });
-            }
             ApplyPause();
+        }
+
+        /// <summary>
+        /// A level just ended, the natural moment for a midgame ad. Never on closing a panel (CrazyGames doesn't allow
+        /// ads on navigation) and not in the first 5 minutes of play, as CrazyGames advises; the SDK itself allows one
+        /// every 3 minutes at most.
+        /// </summary>
+        public void LevelBreak()
+        {
+            if (!Started || WorldPaused || S.playSeconds < Eco.rules.midgameFirstAt) return;
+            PushPause();
+            WebBridge.CommercialBreak(PopPause);
         }
 
         public void ApplyPause()
         {
-            bool p = WorldPaused;
-            Time.timeScale = p ? 0f : SpeedMultiplier;
+            Time.timeScale = WorldPaused ? 0f : SpeedMultiplier;
             AudioListener.pause = WebBridge.AdPlaying || hidden;
-            if (Started)
+            if (Booted)
             {
-                if (p) WebBridge.GameplayStop();
+                // not for a hidden tab: CrazyGames handles focus itself and asks games not to report it
+                if (pauseRequests > 0 || WebBridge.AdPlaying) WebBridge.GameplayStop();
                 else WebBridge.GameplayStart();
             }
         }
@@ -413,7 +430,7 @@ namespace ChaiTycoon
 #endif
         }
 
-        /// <summary>Tab hidden or phone locked: gameplayStop, simulation and audio paused.</summary>
+        /// <summary>Tab hidden or phone locked: simulation and audio paused.</summary>
         public void SetHidden(bool h)
         {
             if (hidden == h) return;

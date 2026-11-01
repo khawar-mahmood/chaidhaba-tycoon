@@ -29,7 +29,7 @@ namespace ChaiTycoon.EditorTools
             ti.textureCompression = TextureImporterCompression.CompressedHQ;
             ti.crunchedCompression = true;
             ti.compressionQuality = 90;
-            // download budget for Poki: colour and metal/smoothness maps at most 1024 px, normal maps 256 px
+            // download budget for CrazyGames (50 MB initial download, 20 MB for the mobile homepage): colour and metal/smoothness maps at most 1024 px, normal maps 256 px
             ti.maxTextureSize = 1024;
             if (file == "Palette")
             {

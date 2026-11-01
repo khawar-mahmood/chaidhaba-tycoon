@@ -62,8 +62,6 @@ namespace ChaiTycoon
             Skin.At(label.rectTransform, 160, 10, 520, 100);
         }
 
-        protected override bool CommercialBreakOnClose => false;
-
         public override void Refresh()
         {
             var s = Game.I.S;

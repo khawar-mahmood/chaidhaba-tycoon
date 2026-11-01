@@ -55,7 +55,7 @@ namespace ChaiTycoon
 
         void WatchForLeaves()
         {
-            WebBridge.RewardedBreak("small", ok =>
+            WebBridge.RewardedBreak(ok =>
             {
                 if (ok)
                 {
@@ -107,7 +107,7 @@ namespace ChaiTycoon
         bool LeafAdAvailable()
         {
             var g = Game.I;
-            if (Time.unscaledTime < leafAdCooldownUntil) return false;
+            if (!WebBridge.RewardsAvailable || Time.unscaledTime < leafAdCooldownUntil) return false;
             foreach (var p in g.Eco.perks)
             {
                 if (p.stage > g.S.maxLocation) continue;

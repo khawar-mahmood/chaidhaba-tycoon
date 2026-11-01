@@ -89,8 +89,6 @@ namespace ChaiTycoon
             tips.Enqueue(new Tip { id = id, text = text, icon = icon, world = world, ui = ui });
         }
 
-        public void OfferShown() => Queue("offer", "Optional: watch an ad for 2x cash!", "tv", null, () => Game.I.Hud.OfferRect);
-
         // ------------------------------------------------------------ main loop
 
         void Update()
@@ -238,9 +236,9 @@ namespace ChaiTycoon
                         if (d < bestD) { bestD = d; best = st; }
                     }
                     if (best == null) break;
-                    // a cook costs a rewarded ad, not cash
+                    // the card takes cash, or a rewarded ad when ads are available
                     target = best.PickupPos;
-                    hint = $"Stand at the {StationName(best)} and tap <color=#1B6DB3>Watch ad</color> for a free cook";
+                    hint = $"Stand at the {StationName(best)} to hire a cook";
                     break;
                 }
                 case "build":

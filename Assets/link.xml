@@ -1,7 +1,10 @@
 <!-- Keep the game's serializable config / save classes when WebGL code stripping is set to High
-     (JsonUtility reads them by reflection-free native serialization, but the linker can't see that). -->
+     (JsonUtility reads them by reflection-free native serialization, but the linker can't see that).
+     The CrazyGames SDK too: its JS answers through SendMessage (JSLibCallback_Init, JSLibCallback_AdFinished...),
+     which the linker can't see either. Without those, init and ad callbacks never arrive. -->
 <linker>
   <assembly fullname="Assembly-CSharp">
     <namespace fullname="ChaiTycoon" preserve="all"/>
+    <namespace fullname="CrazyGames" preserve="all"/>
   </assembly>
 </linker>

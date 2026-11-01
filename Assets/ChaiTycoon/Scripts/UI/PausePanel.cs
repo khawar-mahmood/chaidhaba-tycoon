@@ -12,7 +12,6 @@ namespace ChaiTycoon
         // the same frame as Settings, so the cross sits where it does there
         protected override Vector3 CloseAt => TitleBaked ? new Vector3(33, 29, 44) : base.CloseAt;
         protected override Vector4 BodyInsets => TitleBaked ? Vector4.zero : new Vector4(40, 36, 40, 110);
-        protected override bool CommercialBreakOnClose => false;
 
         protected override void Build()
         {

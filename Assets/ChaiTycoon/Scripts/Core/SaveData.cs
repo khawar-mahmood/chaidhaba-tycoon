@@ -120,11 +120,15 @@ namespace ChaiTycoon
         public const string Key = "cdt_save_v1";
         public const string BackupKey = "cdt_save_bak";
         public static bool Disabled; // set when storage throws; we keep playing silently
+        static bool startedBlank;    // this run found no save to load
 
         public static SaveData Load()
         {
-            var s = TryParse(WebBridge.StorageGet(Key));
-            if (s == null) s = TryParse(WebBridge.StorageGet(BackupKey));
+            string main = WebBridge.StorageGet(Key), backup = WebBridge.StorageGet(BackupKey);
+            Debug.Log($"[Save] load: main {(main == null ? "null" : main.Length.ToString())}, backup {(backup == null ? "null" : backup.Length.ToString())}");
+            var s = TryParse(main);
+            if (s == null) s = TryParse(backup);
+            startedBlank = s == null;
             if (s == null) s = new SaveData();
             Migrate(s);
             return s;
@@ -139,7 +143,7 @@ namespace ChaiTycoon
                 if (s == null || s.v <= 0) return null;
                 return s;
             }
-            catch (Exception) { return null; }
+            catch (Exception e) { Debug.LogWarning("[Save] unreadable save: " + e.Message); return null; }
         }
 
         static void Migrate(SaveData s)
@@ -167,6 +171,17 @@ namespace ChaiTycoon
                 s.lastSeen = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 string json = JsonUtility.ToJson(s);
                 string prev = WebBridge.StorageGet(Key);
+                // a run that found no save must never write over a save that turns up later with more play on it
+                if (startedBlank)
+                {
+                    var stored = TryParse(prev);
+                    if (stored != null && stored.playSeconds > s.playSeconds)
+                    {
+                        Debug.LogWarning("[Save] kept the stored save: this run started blank");
+                        return;
+                    }
+                    startedBlank = false;
+                }
                 if (!string.IsNullOrEmpty(prev)) WebBridge.StorageSet(BackupKey, prev);
                 WebBridge.StorageSet(Key, json);
             }

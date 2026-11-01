@@ -469,14 +469,18 @@ namespace ChaiTycoon
 
         /// <summary>
         /// "Hire a cook" card: only while Rafi stands on a station's ring and that station has no cook yet, popping
-        /// up over his head. The cook's face, what a cook does, and a price button (green when affordable).
+        /// up over his head. The cook's face, what a cook does, a price button (green when affordable) and, when ads
+        /// are available, a Watch ad button for a free cook. Never ad only: the cook is a level task, and CrazyGames
+        /// doesn't allow a level that only an ad can finish.
         /// </summary>
         public class HireCookButton : Widget
         {
             readonly Station st;
-            readonly Image btn;
+            readonly Image cashImg, adImg;
             readonly Text cost;
-            bool shown;
+            readonly GameObject adBtn;
+            readonly RectTransform cashRt;
+            bool shown, adShown = true;
 
             public HireCookButton(WorldUI ui, Station station)
             {
@@ -501,24 +505,12 @@ namespace ChaiTycoon
                 Skin.At(sub.rectTransform, 103, 52, 205, 26);
                 sub.resizeTextForBestFit = true; sub.resizeTextMinSize = 9; sub.resizeTextMaxSize = 13;
                 sub.horizontalOverflow = HorizontalWrapMode.Wrap;
-                // a cook is free for a rewarded ad: the green button carries the TV icon and "Watch ad"
-                var b = UIKit.Button(rt, Pal.Parrot, null, Click);
-                Skin.At((RectTransform)b.transform, 114, 88, 123, 45);
-                btn = b.GetComponent<Image>();
-                SetPrice(true);
-                var tv = UIKit.Image(b.transform, SpriteGen.Icon("tv"), Color.white, "tv");
-                tv.preserveAspect = true;
-                UIKit.Place(tv.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(7, 1), new Vector2(20, 20));
-                // shrinks to fit inside the button (it's only 123 wide)
-                cost = Skin.ButtonLabel(b.transform, "Watch ad", 15, 1f);
-                UIKit.Stretch(cost.rectTransform, 0);
-                cost.rectTransform.offsetMin = new Vector2(29, 4);
-                cost.rectTransform.offsetMax = new Vector2(-8, -4);
-                cost.horizontalOverflow = HorizontalWrapMode.Wrap;
-                cost.verticalOverflow = VerticalWrapMode.Truncate;
-                cost.resizeTextForBestFit = true;
-                cost.resizeTextMinSize = 9;
-                cost.resizeTextMaxSize = 15;
+                var cash = PayButton("coin", "", BuyWithCash, out cashImg, out cost);
+                cashRt = (RectTransform)cash.transform;
+                var ad = PayButton("tv", "Watch ad", WatchAd, out adImg, out _);
+                Skin.At((RectTransform)ad.transform, 189, 88, 124, 45);
+                adBtn = ad.gameObject;
+                LayOutButtons();
                 // on the open floor in front of the ring (towards the counters), hanging below it: never over the stove,
                 // its cooking food or Rafi
                 anchor = () => st.PickupPos + new Vector3(0, 0, -0.75f);
@@ -526,24 +518,55 @@ namespace ChaiTycoon
                 Visible = false;
             }
 
-            /// <summary>The card's own green button (UIv2), grey while an ad is already playing.</summary>
+            Button PayButton(string icon, string label, System.Action click, out Image img, out Text text)
+            {
+                var b = UIKit.Button(rt, Pal.Parrot, null, click);
+                img = b.GetComponent<Image>();
+                var ic = UIKit.Image(b.transform, SpriteGen.Icon(icon), Color.white, icon);
+                ic.preserveAspect = true;
+                UIKit.Place(ic.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(6, 1), new Vector2(18, 18));
+                // shrinks to fit inside the button
+                text = Skin.ButtonLabel(b.transform, label, 15, 1f);
+                UIKit.Stretch(text.rectTransform, 0);
+                text.rectTransform.offsetMin = new Vector2(26, 4);
+                text.rectTransform.offsetMax = new Vector2(-5, -4);
+                text.horizontalOverflow = HorizontalWrapMode.Wrap;
+                text.verticalOverflow = VerticalWrapMode.Truncate;
+                text.resizeTextForBestFit = true;
+                text.resizeTextMinSize = 9;
+                text.resizeTextMaxSize = 15;
+                return b;
+            }
+
+            /// <summary>Side by side with the ad button, or alone in the middle when ads aren't available.</summary>
+            void LayOutButtons()
+            {
+                if (adShown) Skin.At(cashRt, 103, 88, 82, 45);
+                else Skin.At(cashRt, 114, 88, 123, 45);
+            }
+
+            /// <summary>The card's own green button (UIv2), grey when Rafi can't pay or an ad is already playing.</summary>
             void SetPrice(bool affordable)
             {
                 var green = Skin.Get("cook_price");
-                if (affordable && green != null) { btn.sprite = green; btn.type = Image.Type.Simple; btn.color = Color.white; }
-                else UIKit.Paint(btn, affordable ? Pal.Parrot : Pal.ButtonGrey);
+                if (affordable && green != null) { cashImg.sprite = green; cashImg.type = Image.Type.Simple; cashImg.color = Color.white; }
+                else UIKit.Paint(cashImg, affordable ? Pal.Parrot : Pal.ButtonGrey);
             }
 
-            void Click()
+            void BuyWithCash()
             {
-                if (WebBridge.AdPlaying) return;
-                WebBridge.RewardedBreak("small", ok =>
-                {
-                    var loc = Game.I.Loc;
-                    if (ok && st != null && loc.HireCook(st, true)) { Game.I.Fx.Confetti(st.transform.position + Vector3.up * 1.5f, 10); return; }
-                    if (rt) Tw.Punch(rt, 0.15f, 0.25f, true);
-                    if (!ok) Game.I.Hud.Toast("No ad right now. Try again in a moment", "tv");
-                });
+                if (!WebBridge.AdPlaying) Hired(Game.I.Loc.HireCook(st));
+            }
+
+            void WatchAd()
+            {
+                if (!WebBridge.AdPlaying) WebBridge.RewardedBreak(ok => Hired(ok && st != null && Game.I.Loc.HireCook(st, true)));
+            }
+
+            void Hired(bool ok)
+            {
+                if (ok) Game.I.Fx.Confetti(st.transform.position + Vector3.up * 1.5f, 10);
+                else if (rt) Tw.Punch(rt, 0.15f, 0.25f, true);
             }
 
             public override void Tick(float dt)
@@ -555,7 +578,16 @@ namespace ChaiTycoon
                 if (Visible && !shown) Tw.PopIn(rt, 0.25f, true);
                 shown = Visible;
                 if (!Visible) return;
-                SetPrice(!WebBridge.AdPlaying);
+                bool ad = WebBridge.RewardsAvailable;
+                if (ad != adShown)
+                {
+                    adShown = ad;
+                    adBtn.SetActive(ad);
+                    LayOutButtons();
+                }
+                cost.text = Fmt.Cash(loc.CookCost);
+                SetPrice(!WebBridge.AdPlaying && Game.I.S.cash >= loc.CookCost);
+                if (ad) UIKit.Paint(adImg, WebBridge.AdPlaying ? Pal.ButtonGrey : Pal.Marigold);
             }
         }
 

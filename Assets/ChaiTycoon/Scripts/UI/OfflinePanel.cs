@@ -13,12 +13,15 @@ namespace ChaiTycoon
         protected override string Title => "Welcome back!";
         protected override Vector2 Size => new Vector2(580, 420);
         protected override Vector4 BodyInsets => new Vector4(40, 36, 40, 112);
-        protected override bool CommercialBreakOnClose => false;
 
         public const float MinAway = 120f, Share = 0.25f;
         Text away, amountText;
         double amount;
         bool paid;
+        RectTransform collectRt;
+        GameObject doubleBtn;
+        const int ButtonFont = 24;
+        static readonly Vector2 ButtonSize = new Vector2(226, 70);
 
         /// <summary>What the time away is worth (0 when it's too short or there's no history yet).</summary>
         public static double Earnings(double awaySeconds)
@@ -39,10 +42,13 @@ namespace ChaiTycoon
             UIKit.Place(coin.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(-92, -72), new Vector2(54, 54));
             amountText = UIKit.Text(body, "", 50, Skin.Ink, TextAnchor.MiddleLeft);
             UIKit.Place(amountText.rectTransform, new Vector2(0.5f, 1), new Vector2(0, 0.5f), new Vector2(-56, -72), new Vector2(260, 60));
-            var collect = UIKit.Button(body, Pal.Parrot, "Collect", () => Pay(1), 30);
-            UIKit.Place((RectTransform)collect.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-120, 4), new Vector2(210, 70));
-            var dbl = UIKit.Button(body, Pal.Marigold, "2x  Watch ad", WatchForDouble, 24, SpriteGen.Icon("tv"), 36);
-            UIKit.Place((RectTransform)dbl.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(120, 4), new Vector2(230, 70));
+            // CrazyGames: the way out without an ad must match the ad button in size, font and colour
+            var collect = UIKit.Button(body, Pal.Parrot, "Collect", () => Pay(1), ButtonFont);
+            collectRt = (RectTransform)collect.transform;
+            UIKit.Place(collectRt, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-120, 4), ButtonSize);
+            var dbl = UIKit.Button(body, Pal.Parrot, "2x  Watch ad", WatchForDouble, ButtonFont, SpriteGen.Icon("tv"), 36);
+            UIKit.Place((RectTransform)dbl.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(120, 4), ButtonSize);
+            doubleBtn = dbl.gameObject;
         }
 
         public void Show(double earned, double awaySeconds)
@@ -50,6 +56,9 @@ namespace ChaiTycoon
             amount = earned;
             paid = false;
             Open();
+            bool ads = WebBridge.RewardsAvailable;
+            doubleBtn.SetActive(ads);
+            UIKit.Place(collectRt, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(ads ? -120 : 0, 4), ButtonSize);
             away.text = "While you were away (" + Duration(awaySeconds) + "), your dhaba earned";
             amountText.text = Fmt.Cash(amount);
         }
@@ -66,7 +75,7 @@ namespace ChaiTycoon
         void WatchForDouble()
         {
             if (paid) return;
-            WebBridge.RewardedBreak("medium", ok => Pay(ok ? 2 : 1));
+            WebBridge.RewardedBreak(ok => Pay(ok ? 2 : 1));
         }
 
         void Pay(int mult)
